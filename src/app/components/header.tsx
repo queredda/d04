@@ -7,11 +7,11 @@ interface HeaderProps {
 
 export function Header({ isActive }: HeaderProps) {
   return (
-    <div className={`${isActive ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-gray-400 to-gray-500'} rounded-2xl p-8 mb-8 text-white shadow-2xl transition-all duration-500`}>
+    <div className={`${isActive ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-gray-400 to-gray-500'} rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-2xl transition-all duration-500`}>
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-light mb-2">Pengusir Tikus Ultrasonik</h1>
-          <p className="text-xl opacity-90">Sistem Monitoring IoT untuk Petani</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-light mb-2">Pengusir Tikus Ultrasonik</h1>
+          <p className="text-lg sm:text-xl opacity-90">Sistem Monitoring IoT untuk Petani</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
