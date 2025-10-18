@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rat Repelling IoT Dashboard
+
+A Next.js dashboard for monitoring and controlling rat repelling IoT devices with real-time MQTT communication.
+
+## Features
+
+- Real-time sensor data monitoring (ultrasonic, battery level, connection status)
+- Device control (toggle ultrasonic repeller on/off)
+- Responsive dashboard with modern UI components
+- MQTT integration for IoT device communication
 
 ## Getting Started
 
-First, run the development server:
-
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## IoT Device Simulation
 
-## Learn More
+To test the dashboard with simulated sensor data:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+node device-simulator.js
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This will start sending simulated sensor data to the MQTT broker every 5 seconds.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type safety
+- **Tailwind CSS v4** - Styling
+- **MQTT.js** - IoT communication
+- **EMQX Public Broker** - MQTT message broker
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Configuration
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The application uses the EMQX public broker (`wss://broker.emqx.io:8084/mqtt`) for MQTT communication. Configuration is stored in `.env.local`:
+
+```
+NEXT_PUBLIC_MQTT_BROKER_URL=wss://broker.emqx.io:8084/mqtt
+```
+
+## Project Structure
+
+- `src/app/` - Next.js app router pages and components
+- `src/app/components/` - Dashboard UI components
+- `src/app/hooks/` - Custom React hooks for MQTT data
+- `src/lib/` - MQTT client configuration
+- `device-simulator.js` - IoT device simulator script

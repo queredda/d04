@@ -1,42 +1,65 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { DeviceData } from '../types/device';
+import { useEffect, useState } from "react";
+import { DeviceData } from "../types/device";
+import { getMqttClient } from "../../lib/mqttClient";
 
 export function useDeviceData() {
   const [deviceData, setDeviceData] = useState<DeviceData>({
-    isActive: true,
-    batteryPercentage: 78,
-    ratsDetected: 12,
-    ultrasonicOutput: 85,
+    isActive: false,
+    batteryPercentage: 0,
+    ratsDetected: 0,
+    ultrasonicOutput: 0,
     lastUpdated: new Date(),
-    signalStrength: 92
+    signalStrength: 0,
   });
 
+  useEffect(() => {
+    const client = getMqttClient();
+
+    // Daftar topik yang dikirim oleh perangkat kamu
+    const topics = ["device/status", "device/data"];
+    client.subscribe(topics, (err) => {
+      if (err) console.error("Subscribe error:", err);
+    });
+
+    client.on("message", (topic, payload) => {
+      try {
+        const message = JSON.parse(payload.toString());
+
+        if (topic === "device/status") {
+          setDeviceData((prev) => ({
+            ...prev,
+            isActive: message.isActive,
+            lastUpdated: new Date(),
+          }));
+        } else if (topic === "device/data") {
+          setDeviceData((prev) => ({
+            ...prev,
+            ...message,
+            lastUpdated: new Date(),
+          }));
+        }
+      } catch (error) {
+        console.error("Invalid MQTT message:", error);
+      }
+    });
+
+    return () => {
+      client.unsubscribe(topics);
+    };
+  }, []);
+
+  // Fungsi publish untuk nyalakan/matikan alat
   const toggleDevice = () => {
-    setDeviceData(prev => ({
+    const client = getMqttClient();
+    const newState = !deviceData.isActive;
+    client.publish("device/control", JSON.stringify({ isActive: newState }));
+    setDeviceData((prev) => ({
       ...prev,
-      isActive: !prev.isActive,
-      lastUpdated: new Date()
+      isActive: newState,
+      lastUpdated: new Date(),
     }));
   };
-
-  // Simulasi update data setiap 5 detik
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (deviceData.isActive) {
-        setDeviceData(prev => ({
-          ...prev,
-          ratsDetected: prev.ratsDetected + Math.floor(Math.random() * 2),
-          ultrasonicOutput: 80 + Math.floor(Math.random() * 20),
-          batteryPercentage: Math.max(0, prev.batteryPercentage - 0.1),
-          lastUpdated: new Date(),
-          signalStrength: 85 + Math.floor(Math.random() * 15)
-        }));
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [deviceData.isActive]);
 
   return { deviceData, toggleDevice };
 }
