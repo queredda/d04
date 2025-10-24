@@ -4,5 +4,8 @@ export interface DeviceData {
   ratsDetected: number;
   ultrasonicOutput: number;
   lastUpdated: Date;
-  signalStrength: number;
+  // Indicates whether the device is connected to the broker / reachable
+  connected: boolean;
+  // optional legacy field if you still publish signal strength
+  signalStrength?: number;
 }

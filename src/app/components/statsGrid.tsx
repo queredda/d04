@@ -26,7 +26,7 @@ export function StatsGrid({ deviceData }: StatsGridProps) {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ConnectionCard signalStrength={deviceData.signalStrength} />
+  <ConnectionCard connected={!!deviceData.connected} />
         <LastUpdatedCard lastUpdated={deviceData.lastUpdated} />
       </div>
     </>
