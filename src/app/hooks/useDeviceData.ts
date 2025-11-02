@@ -1,155 +1,121 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
-import { DeviceData } from '../types/device';
 
-/**
- * useDeviceData
- * - By default uses a small simulated device data so UI keeps working when STM isn't ready.
- * - If NEXT_PUBLIC_MQTT_URL is provided, it will attempt to connect to that broker (WebSocket)
- *   and subscribe to topics to update batteryPercentage, ratsDetected and connection status.
- *
- * Environment variables (configure in .env.local or hosting):
- * - NEXT_PUBLIC_MQTT_URL (e.g. ws://localhost:9001 or ws://broker.example.com:9001)
- * - NEXT_PUBLIC_MQTT_TOPIC_BASE (defaults to 'ratrepelling/device')
- */
+import { useState, useEffect } from 'react';
+import { DeviceData } from '../types/device';
+import { useMQTTCool } from './useMQTTcool';
+
+// MQTT Broker Configuration
+const MQTT_COOL_URL = 'ws://test.mosquitto.org:8081';
+
+// Topics sesuai dengan STM32
+const TOPIC_SENSOR_DATA = 'sensor/dataD04'; // Subscribe - terima data dari STM32
+const TOPIC_CONTROL = 'iot/control';         // Publish - kirim perintah ke STM32
+
 export function useDeviceData() {
   const [deviceData, setDeviceData] = useState<DeviceData>({
-    isActive: true,
-    batteryPercentage: 78,
-    ratsDetected: 12,
-    ultrasonicOutput: 85,
+    isActive: false,
+    batteryPercentage: 0,
+    ratsDetected: 0,
+    ultrasonicOutput: 0, // Frekuensi dalam kHz (20, 25, 30, 35, 40)
     lastUpdated: new Date(),
     connected: false,
-    signalStrength: undefined
+    signalStrength: 0
   });
 
-  const mqttClientRef = useRef<any | null>(null);
+  const { isConnected, messages, subscribe, publish, connectionError } = useMQTTCool(MQTT_COOL_URL);
+
+  // Subscribe ke topik sensor data saat koneksi berhasil
+  useEffect(() => {
+    if (isConnected) {
+      console.log('Connection established, subscribing to topics...');
+      subscribe(TOPIC_SENSOR_DATA, 0);
+      console.log(`Listening on topic: ${TOPIC_SENSOR_DATA}`);
+    }
+  }, [isConnected, subscribe]);
+
+  // Parse pesan MQTT yang diterima dari STM32
+  useEffect(() => {
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      
+      console.log('Processing message:', latestMessage);
+      
+      if (latestMessage.topic === TOPIC_SENSOR_DATA) {
+        try {
+          const messageStr = latestMessage.message;
+          
+          console.log('Data dari STM32:', messageStr);
+          
+          // Cek apakah pesan adalah "hei aku disini" dari STM32
+          if (messageStr.includes('hei aku disini') || messageStr.includes('hei')) {
+            console.log('Heartbeat message received from STM32');
+            setDeviceData(prev => ({
+              ...prev,
+              isActive: true,
+              connected: true,
+              lastUpdated: new Date(),
+              signalStrength: 90 + Math.floor(Math.random() * 10)
+            }));
+            return;
+          }
+          
+          // Coba parse sebagai JSON
+          try {
+            const data = JSON.parse(messageStr);
+            console.log('Parsed JSON data:', data);
+            
+            setDeviceData(prev => ({
+              ...prev,
+              batteryPercentage: data.battery !== undefined ? data.battery : prev.batteryPercentage,
+              ratsDetected: data.rats_detected ? prev.ratsDetected + 1 : prev.ratsDetected,
+              // ultrasonicOutput menyimpan frekuensi dalam kHz dari STM32
+              ultrasonicOutput: data.ultrasonic_freq !== undefined ? data.ultrasonic_freq : prev.ultrasonicOutput,
+              isActive: data.is_active !== undefined ? data.is_active : prev.isActive,
+              connected: true,
+              lastUpdated: new Date(),
+              signalStrength: 85 + Math.floor(Math.random() * 15)
+            }));
+          } catch (e) {
+            // Jika bukan JSON, update last updated saja
+            console.log('Non-JSON message received');
+            setDeviceData(prev => ({
+              ...prev,
+              connected: true,
+              lastUpdated: new Date(),
+              signalStrength: 85 + Math.floor(Math.random() * 15)
+            }));
+          }
+        } catch (error) {
+          console.error('Error parsing MQTT message:', error);
+        }
+      }
+    }
+  }, [messages]);
 
   const toggleDevice = () => {
+    if (!isConnected) {
+      console.warn('Cannot toggle: Not connected to MQTT broker');
+      return;
+    }
+
+    const newState = !deviceData.isActive;
+    
+    // Kirim perintah on/off ke STM32 dalam format JSON
+    const controlMessage = JSON.stringify({
+      state: newState ? 1 : 0,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log('Sending control message:', controlMessage);
+    publish(TOPIC_CONTROL, controlMessage, 0);
+    
+    // Update state lokal
     setDeviceData(prev => ({
       ...prev,
-      isActive: !prev.isActive,
+      isActive: newState,
       lastUpdated: new Date()
     }));
   };
 
-  // NOTE: removed automatic simulation updates so data only changes via MQTT
-  // If you want a simulation mode for local dev, we can re-add it behind
-  // an environment flag like NEXT_PUBLIC_ENABLE_SIMULATION.
-
-  // MQTT: connect if NEXT_PUBLIC_MQTT_URL is set
-  useEffect(() => {
-    const mqttUrl = process.env.NEXT_PUBLIC_MQTT_URL;
-    if (!mqttUrl) return;
-
-    let mounted = true;
-    let client: any = null;
-
-    (async () => {
-      try {
-  // dynamic import to avoid SSR issues; prefer browser build to avoid node shims
-  // note: requires the `mqtt` package installed in node_modules
-  const mqttModule = await import('mqtt/dist/mqtt.min.js');
-        const mqtt = mqttModule.default ?? mqttModule;
-
-        const clientId = 'web-client-' + Math.random().toString(16).slice(2, 10);
-        const opts = { clientId, connectTimeout: 4000, reconnectPeriod: 2000 };
-
-        client = mqtt.connect(mqttUrl, opts);
-        mqttClientRef.current = client;
-
-        const topicBase = process.env.NEXT_PUBLIC_MQTT_TOPIC_BASE || 'ratrepelling/device';
-        const topics = [
-          `${topicBase}/battery`,
-          `${topicBase}/rats`,
-          `${topicBase}/connected`,
-          `${topicBase}/signal`
-        ];
-
-        client.on('connect', () => {
-          if (!mounted) return;
-          setDeviceData(prev => ({ ...prev, connected: true, lastUpdated: new Date() }));
-          // subscribe to topics
-          client.subscribe(topics, (err: any) => {
-            // ignore subscription errors here; app can show connected state
-          });
-        });
-
-        client.on('reconnect', () => {
-          if (!mounted) return;
-          setDeviceData(prev => ({ ...prev, connected: false }));
-        });
-
-        client.on('offline', () => {
-          if (!mounted) return;
-          setDeviceData(prev => ({ ...prev, connected: false }));
-        });
-
-        client.on('error', (err: any) => {
-          // You can log or display errors in UI if desired
-          // console.error('MQTT error', err);
-        });
-
-        client.on('message', (_topic: string, payload: Uint8Array) => {
-          if (!mounted) return;
-          const msg = payload.toString();
-
-          try {
-            // topics: .../battery => numeric or JSON { batteryPercentage }
-            if (_topic.endsWith('/battery')) {
-              const val = Number(msg);
-              if (!Number.isNaN(val)) {
-                setDeviceData(prev => ({ ...prev, batteryPercentage: val, lastUpdated: new Date() }));
-                return;
-              }
-              const parsed = JSON.parse(msg);
-              if (parsed && typeof parsed.batteryPercentage === 'number') {
-                setDeviceData(prev => ({ ...prev, batteryPercentage: parsed.batteryPercentage, lastUpdated: new Date() }));
-              }
-            }
-
-            if (_topic.endsWith('/rats')) {
-              const val = Number(msg);
-              if (!Number.isNaN(val)) {
-                setDeviceData(prev => ({ ...prev, ratsDetected: val, lastUpdated: new Date() }));
-                return;
-              }
-              const parsed = JSON.parse(msg);
-              if (parsed && typeof parsed.ratsDetected === 'number') {
-                setDeviceData(prev => ({ ...prev, ratsDetected: parsed.ratsDetected, lastUpdated: new Date() }));
-              }
-            }
-
-            if (_topic.endsWith('/connected')) {
-              const lower = msg.toLowerCase();
-              const val = lower === '1' || lower === 'true' || lower === 'connected';
-              setDeviceData(prev => ({ ...prev, connected: val, lastUpdated: new Date() }));
-            }
-
-            if (_topic.endsWith('/signal')) {
-              const val = Number(msg);
-              if (!Number.isNaN(val)) {
-                setDeviceData(prev => ({ ...prev, signalStrength: val }));
-              }
-            }
-          } catch (e) {
-            // ignore parse errors
-          }
-        });
-      } catch (err) {
-        // dynamic import or connect failed; leave simulation running
-        // console.error('Could not initialize MQTT', err);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      if (mqttClientRef.current) {
-        try { mqttClientRef.current.end(true); } catch (e) { /* ignore */ }
-        mqttClientRef.current = null;
-      }
-    };
-  }, []);
-
-  return { deviceData, toggleDevice };
+  return { deviceData, toggleDevice, isConnected, connectionError };
 }
