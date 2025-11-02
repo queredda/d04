@@ -15,14 +15,25 @@ export default function RatRepellentDashboard() {
         
         <ControlPanel 
           isActive={deviceData.isActive} 
-          onToggle={toggleDevice} 
+          onToggle={toggleDevice}
         />
         
         <StatsGrid deviceData={deviceData} />
 
         <div className="text-center mt-8 text-gray-500">
           <p>Sistem monitoring pengusir tikus ultrasonik untuk pertanian modern</p>
+
+          {/* ShowDataButton moved into ControlPanel */}
         </div>
+        
+        <footer className="mt-8">
+          <div className="w-full flex justify-center items-center text-gray-500 text-sm">
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden>©</span>
+              <span>Copyrights Capstone D04</span>
+            </span>
+          </div>
+        </footer>
       </div>
     </div>
   );

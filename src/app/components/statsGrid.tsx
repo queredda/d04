@@ -14,7 +14,7 @@ export function StatsGrid({ deviceData }: StatsGridProps) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <BatteryCard percentage={deviceData.batteryPercentage} />
+  <BatteryCard percentage={deviceData.batteryPercentage} voltage={deviceData.batteryVoltage} />
         <RatsDetectedCard 
           count={deviceData.ratsDetected} 
           isActive={deviceData.isActive} 

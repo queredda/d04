@@ -1,11 +1,13 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
+import ShowDataButton from './showDataButton';
+import { DeviceData } from '../types/device';
 
 interface LastUpdatedCardProps {
-  lastUpdated: Date;
+  deviceData: DeviceData;
 }
 
-export function LastUpdatedCard({ lastUpdated }: LastUpdatedCardProps) {
+export function LastUpdatedCard({ deviceData }: LastUpdatedCardProps) {
   const formatTime = (date: Date) => {
     return date.toLocaleString('id-ID', {
       day: '2-digit',
@@ -15,7 +17,6 @@ export function LastUpdatedCard({ lastUpdated }: LastUpdatedCardProps) {
       minute: '2-digit'
     });
   };
-
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
@@ -24,12 +25,21 @@ export function LastUpdatedCard({ lastUpdated }: LastUpdatedCardProps) {
       </div>
       <div className="space-y-2">
         <div className="text-lg font-semibold text-gray-800">
-          {formatTime(lastUpdated)}
+          {formatTime(deviceData.lastUpdated)}
         </div>
         <div className="text-sm text-gray-500">Sinkronisasi data terbaru</div>
         <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
           Terhubung
+        </div>
+
+        <div className="mt-4">
+          <ShowDataButton
+            ultrasonicOutput={deviceData.ultrasonicOutput}
+            batteryVoltage={deviceData.batteryVoltage ?? null}
+            batteryPercentage={deviceData.batteryPercentage}
+            label="Show Data"
+          />
         </div>
       </div>
     </div>
