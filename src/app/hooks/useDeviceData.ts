@@ -5,11 +5,17 @@ import { DeviceData } from '../types/device';
 import { useMQTTCool } from './useMQTTcool';
 
 // MQTT Broker Configuration
-const MQTT_COOL_URL = 'ws://test.mosquitto.org:8081';
+// EMQX public broker supports WebSocket at ws://broker.emqx.io:8083/mqtt and
+// secure WebSocket at wss://broker.emqx.io:8084/mqtt. We pick wss when the
+// page is served over HTTPS to avoid mixed-content blocks.
+const BROKER_HOST = 'broker.emqx.io';
+const MQTT_COOL_URL = (typeof window !== 'undefined' && window.location.protocol === 'https:')
+  ? `wss://${BROKER_HOST}:8084/mqtt`
+  : `ws://${BROKER_HOST}:8083/mqtt`;
 
 // Topics sesuai dengan STM32
-const TOPIC_SENSOR_DATA = 'sensor/dataD04'; // Subscribe - terima data dari STM32
-const TOPIC_CONTROL = 'iot/control';         // Publish - kirim perintah ke STM32
+const TOPIC_SENSOR_DATA = 'D04/sensor'; // Subscribe - terima data dari STM32
+const TOPIC_CONTROL = 'D04/control';         // Publish - kirim perintah ke STM32
 
 export function useDeviceData() {
   const [deviceData, setDeviceData] = useState<DeviceData>({
@@ -66,7 +72,14 @@ export function useDeviceData() {
             
             setDeviceData(prev => ({
               ...prev,
-              batteryPercentage: data.battery !== undefined ? data.battery : prev.batteryPercentage,
+              // Prefer an explicit reported voltage field if present
+              batteryVoltage: (data.battery_voltage !== undefined)
+                ? data.battery_voltage
+                : (data.voltage !== undefined)
+                ? data.voltage
+                : (data.battery !== undefined && typeof data.battery === 'number' && data.battery <= 5)
+                ? data.battery
+                : prev.batteryVoltage,
               ratsDetected: data.rats_detected ? prev.ratsDetected + 1 : prev.ratsDetected,
               // ultrasonicOutput menyimpan frekuensi dalam kHz dari STM32
               ultrasonicOutput: data.ultrasonic_freq !== undefined ? data.ultrasonic_freq : prev.ultrasonicOutput,
@@ -97,16 +110,10 @@ export function useDeviceData() {
       console.warn('Cannot toggle: Not connected to MQTT broker');
       return;
     }
-
     const newState = !deviceData.isActive;
-    
-    // Kirim perintah on/off ke STM32 dalam format JSON
-    const controlMessage = JSON.stringify({
-      state: newState ? 1 : 0,
-      timestamp: new Date().toISOString()
-    });
-    
-    console.log('Sending control message:', controlMessage);
+    const controlMessage = newState ? 'START_NIGHT_MODE' : 'START_DAY_MODE';
+
+    console.log('Sending control message to', TOPIC_CONTROL, ':', controlMessage);
     publish(TOPIC_CONTROL, controlMessage, 0);
     
     // Update state lokal
