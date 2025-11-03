@@ -10,11 +10,11 @@ interface StatsGridProps {
   deviceData: DeviceData;
 }
 
-export function StatsGrid({ deviceData }: StatsGridProps) {
+export const StatsGrid = React.memo(function StatsGrid({ deviceData }: StatsGridProps) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-  <BatteryCard percentage={deviceData.batteryPercentage} voltage={deviceData.batteryVoltage} />
+        <BatteryCard percentage={deviceData.batteryPercentage} voltage={deviceData.batteryVoltage} />
         <RatsDetectedCard 
           count={deviceData.ratsDetected} 
           isActive={deviceData.isActive} 
@@ -26,9 +26,9 @@ export function StatsGrid({ deviceData }: StatsGridProps) {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ConnectionCard isConnected={deviceData.isActive} />
-        <LastUpdatedCard lastUpdated={deviceData.lastUpdated} />
+        <ConnectionCard isConnected={!!deviceData.connected} />
+        <LastUpdatedCard deviceData={deviceData} />
       </div>
     </>
   );
-}
+});
