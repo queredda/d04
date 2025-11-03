@@ -18,22 +18,28 @@ export function LastUpdatedCard({ deviceData }: LastUpdatedCardProps) {
     });
   };
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-700">Pembaruan Terakhir</h3>
-        <Clock className="w-6 h-6 text-blue-500" />
-      </div>
-      <div className="space-y-2">
-        <div className="text-lg font-semibold text-gray-800">
-          {formatTime(deviceData.lastUpdated)}
+    <div className="bg-white rounded-3xl p-7 shadow-xl border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900">Pembaruan Terakhir</h3>
+        <div className="p-3 rounded-full bg-blue-100">
+          <Clock className="w-6 h-6 text-blue-500" />
         </div>
-        <div className="text-sm text-gray-500">Sinkronisasi data terbaru</div>
-        <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-          Terhubung
+      </div>
+
+      <div className="space-y-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-900">
+            {formatTime(deviceData.lastUpdated)}
+          </div>
+          <div className="text-base font-medium text-gray-600 mt-2">Sinkronisasi data terbaru</div>
         </div>
 
-        <div className="mt-4">
+        <div className="flex items-center justify-center px-4 py-3 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+          Data Terhubung
+        </div>
+
+        <div className="mt-6">
           <ShowDataButton
             ultrasonicOutput={deviceData.ultrasonicOutput}
             batteryVoltage={deviceData.batteryVoltage ?? null}

@@ -12,7 +12,7 @@ const BROKER_HOST = 'broker.emqx.io';
 const MQTT_COOL_URL = (typeof window !== 'undefined' && window.location.protocol === 'https:')
   ? `wss://${BROKER_HOST}:8084/mqtt`
   : `ws://${BROKER_HOST}:8083/mqtt`;
-
+``
 // Topics sesuai dengan STM32
 const TOPIC_SENSOR_DATA = 'D04/sensor'; // Subscribe - terima data dari STM32
 const TOPIC_CONTROL = 'D04/control';         // Publish - kirim perintah ke STM32
@@ -72,18 +72,14 @@ export function useDeviceData() {
             
             setDeviceData(prev => ({
               ...prev,
-              // Prefer an explicit reported voltage field if present
-              batteryVoltage: (data.battery_voltage !== undefined)
-                ? data.battery_voltage
-                : (data.voltage !== undefined)
-                ? data.voltage
-                : (data.battery !== undefined && typeof data.battery === 'number' && data.battery <= 5)
-                ? data.battery
-                : prev.batteryVoltage,
-              ratsDetected: data.rats_detected ? prev.ratsDetected + 1 : prev.ratsDetected,
-              // ultrasonicOutput menyimpan frekuensi dalam kHz dari STM32
-              ultrasonicOutput: data.ultrasonic_freq !== undefined ? data.ultrasonic_freq : prev.ultrasonicOutput,
-              isActive: data.is_active !== undefined ? data.is_active : prev.isActive,
+              // Map bat field to batteryVoltage
+              batteryVoltage: data.bat !== undefined ? data.bat : prev.batteryVoltage,
+              // Increment ratsDetected when pir is 1 (motion detected)
+              ratsDetected: data.pir === 1 ? prev.ratsDetected + 1 : prev.ratsDetected,
+              // Map freq_khz to ultrasonicOutput
+              ultrasonicOutput: data.freq_khz !== undefined ? data.freq_khz : prev.ultrasonicOutput,
+              // Map status to isActive
+              isActive: data.status === 'active',
               connected: true,
               lastUpdated: new Date(),
               signalStrength: 85 + Math.floor(Math.random() * 15)
